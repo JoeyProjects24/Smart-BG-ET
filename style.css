@@ -438,6 +438,13 @@ header {
   color: var(--text-color);
 }
 
+.auth-modal-content
+ {
+    background-color: #333;
+    border-radius: 10px;
+    padding: 10px;
+}
+
 .btn-google {
   background-color: #4285f4;
   color: white;
