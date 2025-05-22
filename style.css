@@ -85,14 +85,6 @@ header {
   color: var(--dark);
 }
 
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: 8px;
-  position: relative;
-}
-
 .user-info {
   display: flex;
   flex-direction: column;
@@ -441,16 +433,6 @@ header {
   z-index: 1000;
 }
 
-.auth-modal-content {
-  background-color: var(--card-bg);
-  padding: 24px 16px;
-  border-radius: 10px;
-  text-align: center;
-  width: 90%;
-  max-width: 400px;
-  margin: 0 16px;
-}
-
 .auth-modal-content h3 {
   margin-bottom: 16px;
   color: var(--text-color);
@@ -611,17 +593,4 @@ header {
     gap: 10px;
     margin-left: 15px;
     position: relative;
-}
-
-.logout-btn {
-    background: none;
-    border: none;
-    color: var(--gray);
-    cursor: pointer;
-    padding: 5px;
-    margin-left: 10px;
-}
-
-.logout-btn:hover {
-    color: var(--danger);
 }
