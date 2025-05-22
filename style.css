@@ -594,3 +594,16 @@ header {
     margin-left: 15px;
     position: relative;
 }
+/* Disabled form styling */
+.expense-form.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.expense-form.disabled .form-control {
+  background-color: var(--gray-light);
+}
+
+.expense-form.disected .btn-primary {
+  background-color: var(--gray);
+}
