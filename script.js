@@ -382,5 +382,86 @@ function getCategoryDetails(category) {
   return categories[category] || { icon: 'fa-question', color: '#6c757d' };
 }
 
+
+// Update the loadExpenses function with better error handling
+async function loadExpenses() {
+  try {
+    if (!state.user?.uid) {
+      throw new Error('User not authenticated');
+    }
+
+    const expensesRef = db.collection('users')
+      .doc(state.user.uid)
+      .collection('expenses')
+      .orderBy('date', 'desc');
+
+    const snapshot = await expensesRef.get();
+
+    if (snapshot.empty) {
+      state.expenses = [];
+      renderExpenses();
+      return;
+    }
+
+    state.expenses = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        description: data.description,
+        category: data.category,
+        amount: data.amount,
+        currency: data.currency,
+        date: data.date?.toDate() || new Date()
+      };
+    });
+
+    renderExpenses();
+    updateBalance();
+  } catch (error) {
+    console.error('Error loading expenses:', error);
+    let errorMessage = 'Failed to load expenses. Please try again.';
+    
+    if (error.message.includes('permission-denied')) {
+      errorMessage = 'You do not have permission to view these expenses.';
+    } else if (error.message.includes('user-not-authenticated')) {
+      errorMessage = 'Please sign in to view expenses.';
+    } else if (error.message.includes('not-found')) {
+      errorMessage = 'No expenses found.';
+    }
+    
+    alert(errorMessage);
+  }
+}
+
+// Update the init function to handle initial load
+function init() {
+  // Load UI preferences from localStorage
+  const savedCurrency = localStorage.getItem('baseCurrency');
+  const savedDarkMode = localStorage.getItem('darkMode');
+  
+  state.baseCurrency = savedCurrency || 'USD';
+  state.darkMode = savedDarkMode === 'true';
+
+  // Set up UI
+  elements.baseCurrencySelect.value = state.baseCurrency;
+  document.body.setAttribute('data-theme', state.darkMode ? 'dark' : 'light');
+  elements.themeToggle.innerHTML = state.darkMode ? 
+    '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+  
+  // Set up auth state listener
+  auth.onAuthStateChanged(handleAuthState);
+
+  // Set up event listeners
+  setupEventListeners();
+
+  // Initial renders
+  updateExchangeRateDisplay();
+  toggleExpenseForm();
+  
+  // Show loading state
+  elements.expenseList.innerHTML = '<div class="loading">Loading expenses...</div>';
+}
+
+
 // Start the application
 document.addEventListener('DOMContentLoaded', init);
