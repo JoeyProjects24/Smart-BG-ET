@@ -71,11 +71,11 @@ function init() {
   elements.themeToggle.innerHTML = state.darkMode ? 
     '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
   
-  // Set up event listeners
-  setupEventListeners();
-
   // Set up auth state listener
   auth.onAuthStateChanged(handleAuthState);
+
+  // Set up event listeners
+  setupEventListeners();
 
   // Initial renders
   updateExchangeRateDisplay();
@@ -88,18 +88,56 @@ function handleAuthState(user) {
   if (user) {
     // User is signed in
     state.user = {
-      name: user.displayName,
-      email: user.email,
-      initials: user.displayName.slice(0, 2).toUpperCase()
+      name: user.displayName || 'User',
+      email: user.email || '',
+      initials: (user.displayName || 'US').slice(0, 2).toUpperCase()
     };
     localStorage.setItem('user', JSON.stringify(state.user));
-    renderUserProfile();
+    updateUserProfile();
     elements.authModal.style.display = 'none';
   } else {
     // User is signed out
     state.user = null;
     localStorage.removeItem('user');
-    removeUserProfile();
+    updateUserProfile();
+  }
+}
+
+// Update user profile display
+function updateUserProfile() {
+  // Clear any existing profile
+  const existingProfile = document.querySelector('.user-profile-container');
+  if (existingProfile) {
+    existingProfile.remove();
+  }
+
+  // Clear create account button if it exists
+  if (elements.createAccountBtn.parentElement) {
+    elements.headerControls.removeChild(elements.createAccountBtn);
+  }
+
+  // If user is logged in, show profile
+  if (state.user) {
+    const profileHTML = `
+      <div class="user-profile-container">
+        <div class="user-profile">
+          <div class="user-avatar">${state.user.initials}</div>
+          <div class="user-info">
+            <div class="user-name">${state.user.name}</div>
+            ${state.user.email ? `<div class="user-email">${state.user.email}</div>` : ''}
+          </div>
+          <button class="btn btn-link logout-btn" title="Logout">
+            <i class="fas fa-sign-out-alt"></i>
+          </button>
+        </div>
+      </div>
+    `;
+    
+    elements.headerControls.insertAdjacentHTML('beforeend', profileHTML);
+    document.querySelector('.logout-btn').addEventListener('click', logoutUser);
+  } else {
+    // If no user, show create account button
+    elements.headerControls.appendChild(elements.createAccountBtn);
   }
 }
 
@@ -180,44 +218,6 @@ function logoutUser() {
     console.error('Logout error:', error);
     alert('Logout failed. Please try again.');
   });
-}
-
-// Render user profile
-function renderUserProfile() {
-  // First remove any existing profile
-  removeUserProfile();
-
-  // Remove create account button if it exists
-  if (elements.createAccountBtn.parentElement) {
-    elements.headerControls.removeChild(elements.createAccountBtn);
-  }
-
-  // Create user profile element with logout button
-  const profileHTML = `
-    <div class="user-profile">
-      <div class="user-avatar">${state.user.initials}</div>
-      <div class="user-info">
-        <div class="user-name">${state.user.name}</div>
-        <div class="user-email">${state.user.email}</div>
-      </div>
-      <button class="btn btn-link logout-btn" title="Logout">
-        <i class="fas fa-sign-out-alt"></i>
-      </button>
-    </div>
-  `;
-  
-  elements.headerControls.insertAdjacentHTML('beforeend', profileHTML);
-
-  // Add logout event listener
-  document.querySelector('.logout-btn').addEventListener('click', logoutUser);
-}
-
-// Remove user profile
-function removeUserProfile() {
-  document.querySelector('.user-profile')?.remove();
-  if (!elements.createAccountBtn.parentElement && !state.user) {
-    elements.headerControls.appendChild(elements.createAccountBtn);
-  }
 }
 
 // Theme toggling
