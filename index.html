@@ -7,8 +7,8 @@
     <meta name="description" content="SmartBudget Global - Multi-currency budgeting app">
     <title>SmartBudget Global | Expense Tracker</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -28,38 +28,30 @@
             </div>
         </header>
 
-        <!-- Add this modal at the end of body before scripts -->
-<div id="auth-modal" class="auth-modal">
-    <div class="auth-modal-content">
-        <h3>Welcome to SmartBudget Global</h3>
-        <p>Sign in with your Google account to continue</p>
-        <button id="google-signin-btn" class="btn btn-google">
-            <i class="fab fa-google"></i> Continue with Google
-        </button>
-        <button id="close-modal" class="btn btn-outline">Cancel</button>
-    </div>
-</div>
-
-<!-- Add this to your existing HTML -->
-<template id="logout-template">
-    <button class="btn btn-link logout-btn" title="Logout">
-        <i class="fas fa-sign-out-alt"></i>
-    </button>
-</template>
+        <div id="auth-modal" class="auth-modal">
+            <div class="auth-modal-content">
+                <h3>Welcome to SmartBudget Global</h3>
+                <p>Sign in with your Google account to continue</p>
+                <button id="google-signin-btn" class="btn btn-google">
+                    <i class="fab fa-google"></i> Continue with Google
+                </button>
+                <button id="close-modal" class="btn btn-outline">Cancel</button>
+            </div>
+        </div>
 
         <div class="dashboard">
             <div class="sidebar">
                 <ul class="sidebar-menu">
-                    <li><a href="#" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
-                    <li><a href="#"><i class="fas fa-chart-line"></i> Reports</a></li>
-                    <li><a href="#"><i class="fas fa-bell"></i> Alerts</a></li>
+                    <li><a href="index.html" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li><a href="reports.html"><i class="fas fa-chart-line"></i> Reports</a></li>
+                    <li><a href="alerts.html"><i class="fas fa-bell"></i> Alerts</a></li>
                 </ul>
             </div>
 
             <div class="main-content">
-<div class="stats-grid">
+                <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-title">Total Balance</div>
+                        <div class="stat-title">Total Expenses</div>
                         <div class="stat-value" id="total-balance">$0.00</div>
                         <div class="stat-change">
                             <i class="fas fa-arrow-up"></i> <span id="balance-change">0%</span> from last month
@@ -76,7 +68,7 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <h2 class="card-title">Recent Expenses</h2>
+                        <h2 class="card-title">Add Expenses</h2>
                         <div class="currency-selector">
                             <i class="fas fa-dollar-sign"></i>
                             <select id="base-currency">
@@ -129,7 +121,6 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
