@@ -81,6 +81,7 @@ function init() {
   updateExchangeRateDisplay();
   renderExpenses();
   updateBalance();
+  toggleExpenseForm(); // Disable form if not logged in
 }
 
 // Handle authentication state changes
@@ -95,11 +96,29 @@ function handleAuthState(user) {
     localStorage.setItem('user', JSON.stringify(state.user));
     updateUserProfile();
     elements.authModal.style.display = 'none';
+    toggleExpenseForm(); // Enable form when logged in
   } else {
     // User is signed out
     state.user = null;
     localStorage.removeItem('user');
     updateUserProfile();
+    toggleExpenseForm(); // Disable form when logged out
+  }
+}
+
+// Toggle expense form state
+function toggleExpenseForm() {
+  const formElements = elements.expenseForm.elements;
+  const isDisabled = !state.user;
+  
+  Array.from(formElements).forEach(element => {
+    element.disabled = isDisabled;
+  });
+  
+  if (isDisabled) {
+    elements.expenseForm.classList.add('disabled');
+  } else {
+    elements.expenseForm.classList.remove('disabled');
   }
 }
 
@@ -124,7 +143,7 @@ function updateUserProfile() {
           <div class="user-avatar">${state.user.initials}</div>
           <div class="user-info">
             <div class="user-name">${state.user.name}</div>
-            ${state.user.email ? `<div class="user-email"></div>` : ''}
+            ${state.user.email ? `<div class="user-email">${state.user.email}</div>` : ''}
           </div>
           <button class="btn btn-link logout-btn" title="Logout">
             <i class="fas fa-sign-out-alt"></i>
@@ -157,6 +176,12 @@ function setupEventListeners() {
   // Form submission
   elements.expenseForm.addEventListener('submit', e => {
     e.preventDefault();
+    
+    if (!state.user) {
+      alert('Please sign in to add expenses!');
+      return;
+    }
+
     const description = document.getElementById('expense-description').value.trim();
     const category = document.getElementById('expense-category').value;
     const amount = parseFloat(document.getElementById('expense-amount').value);
@@ -323,6 +348,7 @@ function getCategoryDetails(category) {
   };
   return categories[category] || { icon: 'fa-question', color: '#6c757d' };
 }
+
 
 // Start the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', init);
