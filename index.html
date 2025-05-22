@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4361ee">
+    <meta name="description" content="SmartBudget Global - Multi-currency budgeting app">
+    <title>SmartBudget Global | Expense Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-globe-europe"></i>
+                <h1>SmartBudget Global</h1>
+            </div>
+            <div class="header-controls">
+                <button class="theme-toggle" id="theme-toggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="btn btn-outline" id="create-account-btn">
+                    Create Account
+                </button>
+            </div>
+        </header>
+
+        <!-- Add this modal at the end of body before scripts -->
+<div id="auth-modal" class="auth-modal">
+    <div class="auth-modal-content">
+        <h3>Welcome to SmartBudget Global</h3>
+        <p>Sign in with your Google account to continue</p>
+        <button id="google-signin-btn" class="btn btn-google">
+            <i class="fab fa-google"></i> Continue with Google
+        </button>
+        <button id="close-modal" class="btn btn-outline">Cancel</button>
+    </div>
+</div>
+
+<!-- Add this to your existing HTML -->
+<template id="logout-template">
+    <button class="btn btn-link logout-btn" title="Logout">
+        <i class="fas fa-sign-out-alt"></i>
+    </button>
+</template>
+
+        <div class="dashboard">
+            <div class="sidebar">
+                <ul class="sidebar-menu">
+                    <li><a href="#" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li><a href="#"><i class="fas fa-chart-line"></i> Reports</a></li>
+                    <li><a href="#"><i class="fas fa-bell"></i> Alerts</a></li>
+                </ul>
+            </div>
+
+            <div class="main-content">
+<div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-title">Total Balance</div>
+                        <div class="stat-value" id="total-balance">$0.00</div>
+                        <div class="stat-change">
+                            <i class="fas fa-arrow-up"></i> <span id="balance-change">0%</span> from last month
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Exchange Rate (EUR/USD)</div>
+                        <div class="stat-value" id="exchange-rate">0.00</div>
+                        <div class="stat-change">
+                            <i class="fas fa-arrow-down"></i> <span id="rate-change">0%</span> today
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Recent Expenses</h2>
+                        <div class="currency-selector">
+                            <i class="fas fa-dollar-sign"></i>
+                            <select id="base-currency">
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="JPY">JPY</option>
+                                <option value="INR">INR</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <form class="expense-form" id="expense-form">
+                        <div class="form-group">
+                            <label for="expense-description">Description</label>
+                            <input type="text" id="expense-description" class="form-control" placeholder="Dinner, Taxi, etc." required>
+                        </div>
+                        <div class="form-group">
+                            <label for="expense-category">Category</label>
+                            <select id="expense-category" class="form-control" required>
+                                <option value="food">Food</option>
+                                <option value="transport">Transport</option>
+                                <option value="entertainment">Entertainment</option>
+                                <option value="utilities">Utilities</option>
+                                <option value="shopping">Shopping</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="expense-amount">Amount</label>
+                            <input type="number" id="expense-amount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="expense-currency">Currency</label>
+                            <select id="expense-currency" class="form-control" required>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="JPY">JPY</option>
+                                <option value="INR">INR</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Expense
+                        </button>
+                    </form>
+
+                    <ul class="expense-list" id="expense-list"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
