@@ -124,7 +124,6 @@ function updateUserProfile() {
           <div class="user-avatar">${state.user.initials}</div>
           <div class="user-info">
             <div class="user-name">${state.user.name}</div>
-            ${state.user.email ? `<div class="user-email">${state.user.email}</div>` : ''}
           </div>
           <button class="btn btn-link logout-btn" title="Logout">
             <i class="fas fa-sign-out-alt"></i>
