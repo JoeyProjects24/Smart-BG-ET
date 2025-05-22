@@ -9,19 +9,19 @@ const firebaseConfig = {
   measurementId: "G-DXG5F24HQY"
 };
 
-// Initialize Firebase
+// Initialize Firebase services
 let app, auth, db;
 try {
   app = firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
   db = firebase.firestore();
-  console.log('Firebase initialized successfully');
+  console.log('Firebase services initialized');
 } catch (error) {
-  console.error('Firebase initialization error:', error);
-  alert('Failed to initialize the app. Please try again later.');
+  console.error('Firebase initialization failed:', error);
+  alert('Application failed to initialize. Please refresh the page.');
 }
 
-// App state management
+// Application state
 const state = {
   expenses: [],
   baseCurrency: 'USD',
@@ -52,36 +52,31 @@ const elements = {
   closeModalBtn: document.getElementById('close-modal')
 };
 
-// Initialize the application
+// Initialize application
 function init() {
-  // Load UI preferences from localStorage
-  const savedCurrency = localStorage.getItem('baseCurrency');
-  const savedDarkMode = localStorage.getItem('darkMode');
-  
-  state.baseCurrency = savedCurrency || 'USD';
-  state.darkMode = savedDarkMode === 'true';
+  loadLocalPreferences();
+  setupEventListeners();
+  initializeUI();
+  auth.onAuthStateChanged(handleAuthState);
+}
 
-  // Set up UI
+function loadLocalPreferences() {
+  state.baseCurrency = localStorage.getItem('baseCurrency') || 'USD';
+  state.darkMode = localStorage.getItem('darkMode') === 'true';
+}
+
+function initializeUI() {
   elements.baseCurrencySelect.value = state.baseCurrency;
   document.body.setAttribute('data-theme', state.darkMode ? 'dark' : 'light');
   elements.themeToggle.innerHTML = state.darkMode ? 
     '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-  
-  // Set up auth state listener
-  auth.onAuthStateChanged(handleAuthState);
-
-  // Set up event listeners
-  setupEventListeners();
-
-  // Initial renders
   updateExchangeRateDisplay();
   toggleExpenseForm();
 }
 
-// Handle authentication state changes
+// Authentication handlers
 async function handleAuthState(user) {
   if (user) {
-    // User is signed in
     state.user = {
       uid: user.uid,
       name: user.displayName || 'User',
@@ -89,43 +84,39 @@ async function handleAuthState(user) {
       initials: (user.displayName || 'US').slice(0, 2).toUpperCase()
     };
     
-    // Load user preferences and expenses
-    await loadUserPreferences();
-    await loadExpenses();
-    updateUserProfile();
-    elements.authModal.style.display = 'none';
-    toggleExpenseForm();
+    await Promise.all([loadUserPreferences(), loadExpenses()]);
+    updateUserInterface();
   } else {
-    // User is signed out
     state.user = null;
     state.expenses = [];
-    updateUserProfile();
-    toggleExpenseForm();
-    renderExpenses();
-    updateBalance();
+    updateUserInterface();
   }
 }
 
-// Firestore operations
 async function loadUserPreferences() {
   try {
     const doc = await db.collection('users').doc(state.user.uid).get();
     if (doc.exists) {
       const data = doc.data();
-      state.baseCurrency = data.baseCurrency || 'USD';
-      state.darkMode = data.darkMode || false;
-      
-      // Update UI elements
-      elements.baseCurrencySelect.value = state.baseCurrency;
-      document.body.setAttribute('data-theme', state.darkMode ? 'dark' : 'light');
-      elements.themeToggle.innerHTML = state.darkMode ? 
-        '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+      state.baseCurrency = data.baseCurrency || state.baseCurrency;
+      state.darkMode = data.darkMode ?? state.darkMode;
+      applyPreferencesToUI();
     }
   } catch (error) {
-    console.error('Error loading preferences:', error);
+    console.error('Preferences load error:', error);
   }
 }
 
+function applyPreferencesToUI() {
+  elements.baseCurrencySelect.value = state.baseCurrency;
+  document.body.setAttribute('data-theme', state.darkMode ? 'dark' : 'light');
+  elements.themeToggle.innerHTML = state.darkMode ? 
+    '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+  localStorage.setItem('baseCurrency', state.baseCurrency);
+  localStorage.setItem('darkMode', state.darkMode);
+}
+
+// Firestore operations
 async function loadExpenses() {
   try {
     const snapshot = await db.collection('users')
@@ -136,15 +127,24 @@ async function loadExpenses() {
 
     state.expenses = snapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      ...parseExpenseData(doc.data())
     }));
     
     renderExpenses();
     updateBalance();
   } catch (error) {
-    console.error('Error loading expenses:', error);
-    alert('Failed to load expenses. Please try again.');
+    handleDataError(error, 'load expenses');
   }
+}
+
+function parseExpenseData(data) {
+  return {
+    description: data.description || 'No description',
+    category: data.category || 'other',
+    amount: parseFloat(data.amount) || 0,
+    currency: data.currency || 'USD',
+    date: data.date?.toDate?.() || new Date(data.date)
+  };
 }
 
 async function addExpense(description, category, amount, currency) {
@@ -164,14 +164,13 @@ async function addExpense(description, category, amount, currency) {
 
     state.expenses.unshift({
       id: docRef.id,
-      ...expenseData
+      ...parseExpenseData(expenseData)
     });
     
     renderExpenses();
     updateBalance();
   } catch (error) {
-    console.error('Error adding expense:', error);
-    alert('Failed to add expense. Please try again.');
+    handleDataError(error, 'add expense');
   }
 }
 
@@ -187,38 +186,96 @@ async function deleteExpense(id) {
     renderExpenses();
     updateBalance();
   } catch (error) {
-    console.error('Error deleting expense:', error);
-    alert('Failed to delete expense. Please try again.');
+    handleDataError(error, 'delete expense');
   }
 }
 
-async function saveUserPreferences() {
-  if (state.user) {
-    try {
-      await db.collection('users').doc(state.user.uid).set({
-        baseCurrency: state.baseCurrency,
-        darkMode: state.darkMode
-      }, { merge: true });
-    } catch (error) {
-      console.error('Error saving preferences:', error);
-    }
-  }
-  // Save to localStorage for non-auth users
-  localStorage.setItem('baseCurrency', state.baseCurrency);
-  localStorage.setItem('darkMode', state.darkMode);
+function handleDataError(error, operation) {
+  console.error(`${operation} failed:`, error);
+  const messages = {
+    'permission-denied': 'You do not have permission for this operation',
+    'unauthenticated': 'Please sign in to continue',
+    'not-found': 'Data not found',
+    'default': `Failed to ${operation}. Please try again.`
+  };
+  alert(messages[error.code] || messages.default);
 }
 
-// Update user profile display
+// UI rendering
+function updateUserInterface() {
+  updateUserProfile();
+  toggleExpenseForm();
+  renderExpenses();
+  updateBalance();
+  elements.authModal.style.display = 'none';
+}
+
+function renderExpenses() {
+  elements.expenseList.innerHTML = state.expenses.length > 0
+    ? state.expenses.map(expense => createExpenseHTML(expense)).join('')
+    : '<div class="no-expenses">No expenses recorded yet</div>';
+}
+
+function createExpenseHTML(expense) {
+  const convertedAmount = convertCurrency(
+    expense.amount,
+    expense.currency,
+    state.baseCurrency
+  ).toFixed(2);
+
+  const category = getCategoryDetails(expense.category);
+  const date = expense.date.toLocaleDateString();
+
+  return `
+    <li class="expense-item">
+      <div class="expense-category">
+        <div class="category-icon" style="background-color: ${category.color}">
+          <i class="fas ${category.icon}"></i>
+        </div>
+        <div>
+          <div class="expense-description">${expense.description}</div>
+          <div class="expense-date">${date}</div>
+        </div>
+      </div>
+      <div class="expense-amount">${expense.currency}${expense.amount.toFixed(2)}</div>
+      <div class="expense-converted">≈ ${state.baseCurrency}${convertedAmount}</div>
+      <div class="expense-actions">
+        <button class="expense-delete" data-id="${expense.id}">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </li>
+  `;
+}
+
+function updateBalance() {
+  const total = state.expenses.reduce((sum, expense) => 
+    sum + convertCurrency(expense.amount, expense.currency, state.baseCurrency), 0);
+  elements.totalBalance.textContent = `${state.baseCurrency}${total.toFixed(2)}`;
+}
+
+// Helper functions
+function convertCurrency(amount, from, to) {
+  return from === to ? amount : (amount / state.exchangeRates[from]) * state.exchangeRates[to];
+}
+
+function getCategoryDetails(category) {
+  const categories = {
+    food: { icon: 'fa-utensils', color: '#4cc9f0' },
+    transport: { icon: 'fa-bus', color: '#4361ee' },
+    entertainment: { icon: 'fa-film', color: '#f8961e' },
+    utilities: { icon: 'fa-bolt', color: '#f72585' },
+    shopping: { icon: 'fa-shopping-bag', color: '#3f37c9' }
+  };
+  return categories[category] || { icon: 'fa-question', color: '#6c757d' };
+}
+
 function updateUserProfile() {
-  const existingProfile = document.querySelector('.user-profile-container');
-  if (existingProfile) existingProfile.remove();
-
-  if (elements.createAccountBtn.parentElement) {
-    elements.headerControls.removeChild(elements.createAccountBtn);
-  }
+  const profileContainer = document.querySelector('.user-profile-container');
+  if (profileContainer) profileContainer.remove();
 
   if (state.user) {
-    const profileHTML = `
+    elements.headerControls.insertAdjacentHTML('beforeend', `
       <div class="user-profile-container">
         <div class="user-profile">
           <div class="user-avatar">${state.user.initials}</div>
@@ -231,25 +288,22 @@ function updateUserProfile() {
           </button>
         </div>
       </div>
-    `;
-    
-    elements.headerControls.insertAdjacentHTML('beforeend', profileHTML);
+    `);
     document.querySelector('.logout-btn').addEventListener('click', logoutUser);
   } else {
     elements.headerControls.appendChild(elements.createAccountBtn);
   }
 }
 
-// Toggle expense form state
 function toggleExpenseForm() {
   const isDisabled = !state.user;
+  elements.expenseForm.classList.toggle('disabled', isDisabled);
   Array.from(elements.expenseForm.elements).forEach(element => {
     element.disabled = isDisabled;
   });
-  elements.expenseForm.classList.toggle('disabled', isDisabled);
 }
 
-// Event listeners and UI functions
+// Event handlers
 function setupEventListeners() {
   elements.themeToggle.addEventListener('click', () => {
     state.darkMode = !state.darkMode;
@@ -268,15 +322,18 @@ function setupEventListeners() {
 
   elements.expenseForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!state.user) return alert('Please sign in to add expenses!');
-
+    if (!state.user) return alert('Please sign in to add expenses');
+    
     const description = document.getElementById('expense-description').value.trim();
-    const category = document.getElementById('expense-category').value;
     const amount = parseFloat(document.getElementById('expense-amount').value);
-    const currency = document.getElementById('expense-currency').value;
     
     if (description && !isNaN(amount) && amount > 0) {
-      await addExpense(description, category, amount, currency);
+      await addExpense(
+        description,
+        document.getElementById('expense-category').value,
+        amount,
+        document.getElementById('expense-currency').value
+      );
       elements.expenseForm.reset();
     }
   });
@@ -288,29 +345,39 @@ function setupEventListeners() {
     }
   });
 
-  elements.createAccountBtn.addEventListener('click', () => {
-    elements.authModal.style.display = 'flex';
+  elements.googleSigninBtn.addEventListener('click', () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    auth.signInWithPopup(provider).catch(handleAuthError);
   });
 
-  elements.googleSigninBtn.addEventListener('click', signInWithGoogle);
   elements.closeModalBtn.addEventListener('click', () => {
     elements.authModal.style.display = 'none';
   });
 }
 
-// Authentication functions
-async function signInWithGoogle() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: 'select_account' });
+function handleAuthError(error) {
+  const messages = {
+    'auth/popup-closed-by-user': 'Sign-in window was closed',
+    'auth/network-request-failed': 'Network error',
+    'default': 'Authentication failed'
+  };
+  alert(messages[error.code] || messages.default);
+}
 
-  try {
-    await auth.signInWithPopup(provider);
-  } catch (error) {
-    let message = 'Sign-in failed. Please try again.';
-    if (error.code === 'auth/popup-closed-by-user') message = 'Sign-in window closed.';
-    if (error.code === 'auth/network-request-failed') message = 'Network error.';
-    alert(message);
+async function saveUserPreferences() {
+  if (state.user) {
+    try {
+      await db.collection('users').doc(state.user.uid).set({
+        baseCurrency: state.baseCurrency,
+        darkMode: state.darkMode
+      }, { merge: true });
+    } catch (error) {
+      console.error('Preferences save failed:', error);
+    }
   }
+  localStorage.setItem('baseCurrency', state.baseCurrency);
+  localStorage.setItem('darkMode', state.darkMode);
 }
 
 function logoutUser() {
@@ -320,148 +387,5 @@ function logoutUser() {
   });
 }
 
-// Expense rendering and calculations
-function renderExpenses() {
-  elements.expenseList.innerHTML = state.expenses.map(expense => {
-    const convertedAmount = convertCurrency(
-      expense.amount,
-      expense.currency,
-      state.baseCurrency
-    ).toFixed(2);
-
-    const category = getCategoryDetails(expense.category);
-    const date = expense.date?.toDate ? expense.date.toDate() : new Date(expense.date);
-
-    return `
-      <li class="expense-item">
-        <div class="expense-category">
-          <div class="category-icon" style="background-color: ${category.color}">
-            <i class="fas ${category.icon}"></i>
-          </div>
-          <div>
-            <div class="expense-description">${expense.description}</div>
-            <div class="expense-date">${date.toLocaleDateString()}</div>
-          </div>
-        </div>
-        <div class="expense-amount">${expense.currency}${expense.amount.toFixed(2)}</div>
-        <div class="expense-converted">≈ ${state.baseCurrency}${convertedAmount}</div>
-        <div class="expense-actions">
-          <button class="expense-delete" data-id="${expense.id}">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
-      </li>
-    `;
-  }).join('') || `<div class="no-expenses">No expenses recorded yet</div>`;
-}
-
-function updateBalance() {
-  const total = state.expenses.reduce((sum, expense) => {
-    return sum + convertCurrency(expense.amount, expense.currency, state.baseCurrency);
-  }, 0);
-  elements.totalBalance.textContent = `${state.baseCurrency}${total.toFixed(2)}`;
-}
-
-function convertCurrency(amount, fromCurrency, toCurrency) {
-  if (fromCurrency === toCurrency) return amount;
-  return (amount / state.exchangeRates[fromCurrency]) * state.exchangeRates[toCurrency];
-}
-
-function updateExchangeRateDisplay() {
-  elements.exchangeRate.textContent = state.exchangeRates.EUR.toFixed(4);
-}
-
-function getCategoryDetails(category) {
-  const categories = {
-    food: { icon: 'fa-utensils', color: '#4cc9f0' },
-    transport: { icon: 'fa-bus', color: '#4361ee' },
-    entertainment: { icon: 'fa-film', color: '#f8961e' },
-    utilities: { icon: 'fa-bolt', color: '#f72585' },
-    shopping: { icon: 'fa-shopping-bag', color: '#3f37c9' }
-  };
-  return categories[category] || { icon: 'fa-question', color: '#6c757d' };
-}
-
-
-// Update the loadExpenses function with better error handling
-async function loadExpenses() {
-  try {
-    if (!state.user?.uid) {
-      throw new Error('User not authenticated');
-    }
-
-    const expensesRef = db.collection('users')
-      .doc(state.user.uid)
-      .collection('expenses')
-      .orderBy('date', 'desc');
-
-    const snapshot = await expensesRef.get();
-
-    if (snapshot.empty) {
-      state.expenses = [];
-      renderExpenses();
-      return;
-    }
-
-    state.expenses = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        description: data.description,
-        category: data.category,
-        amount: data.amount,
-        currency: data.currency,
-        date: data.date?.toDate() || new Date()
-      };
-    });
-
-    renderExpenses();
-    updateBalance();
-  } catch (error) {
-    console.error('Error loading expenses:', error);
-    let errorMessage = 'Failed to load expenses. Please try again.';
-    
-    if (error.message.includes('permission-denied')) {
-      errorMessage = 'You do not have permission to view these expenses.';
-    } else if (error.message.includes('user-not-authenticated')) {
-      errorMessage = 'Please sign in to view expenses.';
-    } else if (error.message.includes('not-found')) {
-      errorMessage = 'No expenses found.';
-    }
-    
-    alert(errorMessage);
-  }
-}
-
-// Update the init function to handle initial load
-function init() {
-  // Load UI preferences from localStorage
-  const savedCurrency = localStorage.getItem('baseCurrency');
-  const savedDarkMode = localStorage.getItem('darkMode');
-  
-  state.baseCurrency = savedCurrency || 'USD';
-  state.darkMode = savedDarkMode === 'true';
-
-  // Set up UI
-  elements.baseCurrencySelect.value = state.baseCurrency;
-  document.body.setAttribute('data-theme', state.darkMode ? 'dark' : 'light');
-  elements.themeToggle.innerHTML = state.darkMode ? 
-    '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-  
-  // Set up auth state listener
-  auth.onAuthStateChanged(handleAuthState);
-
-  // Set up event listeners
-  setupEventListeners();
-
-  // Initial renders
-  updateExchangeRateDisplay();
-  toggleExpenseForm();
-  
-  // Show loading state
-  elements.expenseList.innerHTML = '<div class="loading">Loading expenses...</div>';
-}
-
-
-// Start the application
+// Start application
 document.addEventListener('DOMContentLoaded', init);
