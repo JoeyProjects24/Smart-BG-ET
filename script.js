@@ -1,3 +1,4 @@
+
 // Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyCj56ZyZGEwHaMvQFD6kTQ3AQ-cE_saxiY",
@@ -207,31 +208,73 @@ function logoutUser() {
   });
 }
 
+// ... (keep all the previous Firebase config and initialization code)
+
 // Render user profile
 function renderUserProfile() {
-  // Remove create account button if it exists
-  if (elements.createAccountBtn.parentElement) {
-    elements.headerControls.removeChild(elements.createAccountBtn);
-  }
+    // First, remove any existing user profile
+    const existingProfile = document.querySelector('.user-profile');
+    if (existingProfile) {
+        existingProfile.remove();
+    }
 
-  // Create user profile element with logout button
-  const profileHTML = `
-    <div class="user-profile">
-      <div class="user-avatar">${state.user.initials}</div>
-      <div class="user-info">
-        <div class="user-name">${state.user.name}</div>
-        <div class="user-email">${state.user.email}</div>
-      </div>
-      <button class="btn btn-link logout-btn" title="Logout">
-        <i class="fas fa-sign-out-alt"></i>
-      </button>
-    </div>
-  `;
-  
-  elements.headerControls.insertAdjacentHTML('beforeend', profileHTML);
+    // Remove create account button if it exists
+    if (elements.createAccountBtn.parentElement) {
+        elements.headerControls.removeChild(elements.createAccountBtn);
+    }
 
-  // Add logout event listener
-  document.querySelector('.logout-btn').addEventListener('click', logoutUser);
+    // Create user profile element with logout button
+    const profileHTML = `
+        <div class="user-profile">
+            <div class="user-avatar">${state.user.initials}</div>
+            <div class="user-info">
+                <div class="user-name">${state.user.name}</div>
+                <div class="user-email">${state.user.email}</div>
+            </div>
+            <button class="btn btn-link logout-btn" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    `;
+    
+    elements.headerControls.insertAdjacentHTML('beforeend', profileHTML);
+
+    // Add logout event listener
+    document.querySelector('.logout-btn').addEventListener('click', logoutUser);
+}
+
+// Auth state handler
+function handleAuthState(user) {
+    if (user) {
+        // User is signed in
+        state.user = {
+            name: user.displayName,
+            email: user.email,
+            initials: user.displayName.slice(0, 2).toUpperCase()
+        };
+        localStorage.setItem('user', JSON.stringify(state.user));
+        renderUserProfile(); // This will now clean up before rendering
+        elements.authModal.style.display = 'none';
+    } else {
+        // User is signed out
+        state.user = null;
+        localStorage.removeItem('user');
+        document.querySelector('.user-profile')?.remove();
+        if (!elements.createAccountBtn.parentElement) {
+            elements.headerControls.appendChild(elements.createAccountBtn);
+        }
+    }
+}
+
+// Initialize the application
+function init() {
+    // ... (keep all the previous initialization code)
+
+    // Set up auth state listener with the new handler
+    auth.onAuthStateChanged(handleAuthState);
+}
+
+// ... (keep all the remaining code) document.querySelector('.logout-btn').addEventListener('click', logoutUser);
 }
 
 // Theme toggling
