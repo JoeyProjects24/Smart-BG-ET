@@ -619,3 +619,19 @@ header {
   color: var(--text-muted);
   font-style: italic;
 }
+.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.loading, .no-expenses {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+}
+
+.error {
+  color: #dc3545;
+  padding: 1rem;
+  text-align: center;
+}
